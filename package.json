@@ -2,16 +2,26 @@
   "name": "coderjr",
   "displayName": "Coder Jr",
   "description": "It will help you with coding.",
-  "version": "0.0.1",
+  "version": "0.4.0",
   "engines": {
     "vscode": "^1.74.0"
   },
   "categories": [
     "Other"
   ],
-  "activationEvents": [],
+  "activationEvents": [
+    "onLanguage:javascript"
+  ],
   "main": "./extension.js",
-  "contributes": {},
+  "contributes": {
+    "keybindings": [
+      {
+        "command": "coderjr.command",
+        "key": "Shift+Enter",
+        "when": "editorTextFocus"
+      }
+    ]
+  },
   "scripts": {
     "lint": "eslint .",
     "pretest": "npm run lint",
