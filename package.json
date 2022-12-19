@@ -1,8 +1,12 @@
 {
   "name": "coderjr",
+  "icon": "coderjr-logo.png",
   "displayName": "Coder Jr",
-  "description": "It will help you with coding.",
-  "version": "0.9.0",
+  "description": "Designed to streamline your coding workflow, this Visual Studio Code extension offers a range of helpful features and tools.",
+  "version": "1.0.0",
+  "author": "Prantik",
+  "repository": "https://github.com/prantiknoor/coderjr",
+  "publisher": "Prantik",
   "engines": {
     "vscode": "^1.74.0"
   },
@@ -10,7 +14,7 @@
     "Other"
   ],
   "activationEvents": [
-    "onLanguage:javascript"
+    "onStartupFinished"
   ],
   "main": "./extension.js",
   "contributes": {

@@ -168,7 +168,7 @@ function getComment() {
   let comments, i = 0;
   do {
     comments = lineText.match(COMMENT_REGEX[i]);
-  } while (i < COMMENT_REGEX.length && !comments);
+  } while (++i < COMMENT_REGEX.length && !comments);
 
   if (!comments) return "";
   let comment = comments[0].replace(/\/\/|\/\*|\*\/|#|<!--|-->/g, "");
