@@ -1,4 +1,5 @@
 const vscode = require("vscode");
+const axios = require("axios");
 
 /**
  * @param {vscode.ExtensionContext} context
@@ -9,19 +10,38 @@ function activate(context) {
   let disposable = vscode.commands.registerCommand(
     "coderjr.command",
     async () => {
-      // it checks if the cursor in a comment line or not
-      const inCommentLine = isInCommentLine();
+      let apiKey = getApiKey();
+      if (!apiKey) {
+        let input = await openInputBoxForApiKey();
+        if (!input) {
+          return vscode.window.showWarningMessage("Please enter you API Key");
+        }
+        apiKey = input;
+        storeApiKey(apiKey);
+      }
 
-      if (!inCommentLine) {
-        vscode.window.showInformationMessage("You should be in a comment");
-        return;
+      const comment = getComment();
+
+      if (!comment) {
+        return vscode.window.showWarningMessage(
+          "You should be in a position to comment."
+        );
+      } else if (comment.split(" ").length < 3) {
+        return vscode.window.showWarningMessage(
+          "You must use a minimum of three words."
+        );
       }
 
       let statusBarMsg = vscode.window.setStatusBarMessage("Searching...");
 
-      let response = await makeHttpRequestToOpenAi("");
+      let response = await requestToOpenApi(comment, apiKey);
 
       statusBarMsg.dispose();
+
+      if (response.status === "failed") {
+        vscode.window.setStatusBarMessage("Failed", 3000);
+        return vscode.window.showErrorMessage(response.msg);
+      }
 
       let selection = await insertText(response);
 
@@ -36,23 +56,49 @@ function activate(context) {
  * This makes http request to openAi with the query as prompt
  *
  * @param {String} query it is the prompt for openai chatGPT
- * 
- * @returns {Promise<String>}
+ * @param {String} apiKey the API Key of OpenAI
+ *
+ * @returns {Promise<Object>}
  */
-async function makeHttpRequestToOpenAi(query) {
-  // TODO make real http request
+async function requestToOpenApi(query, apiKey) {
+  let languageId = vscode.window.activeTextEditor.document.languageId;
 
-  return await new Promise((resolve) => {
-    setTimeout(() => {
-      resolve(`function fahrenheitToCelsius(fahrenheit) {
-	return (fahrenheit - 32) / 1.8;
-}`);
-    }, 2000);
-  });
+  const options = {
+    method: "POST",
+    url: "https://api.openai.com/v1/completions",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "content-type": "application/json",
+    },
+    data: {
+      model: "text-davinci-003",
+      prompt: `${query} (${languageId})`,
+      temperature: 0.7,
+      max_tokens: 256,
+      top_p: 1,
+      frequency_penalty: 0,
+      presence_penalty: 0,
+    },
+  };
+
+  let response;
+  try {
+    response = await axios.default.request(options);
+  } catch (err) {
+    response = err.response;
+    storeApiKey(""); // Remove the invalid API Key.
+    return { status: "failed", msg: response.data.error.message };
+  }
+
+  if (response.status !== 200)
+    return { status: "failed", msg: response.statusText };
+
+  let text = response.data.choices[0].text;
+  return text.slice(2, text.length);
 }
 
 /**
- * It inserts text after the comment and 
+ * It inserts text after the comment and
  * returns the selection of inserted text
  *
  * @param {string} text this will be inserted to the doc
@@ -70,21 +116,21 @@ async function insertText(text) {
   edit.insert(editor.document.uri, insertionPosition, `\n${text}`);
   vscode.workspace.applyEdit(edit);
 
-	let startLine = lineIndex + 1;
+  let startLine = lineIndex + 1;
   let startPos = new vscode.Position(startLine, 0);
   let endPos = getEndPosition(text, startLine);
 
-	return new Promise(resolve => {
-		setTimeout(() => {
-			let selection = new vscode.Selection(startPos, endPos);
-			resolve(selection);
-		}, 10);
-	});
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      let selection = new vscode.Selection(startPos, endPos);
+      resolve(selection);
+    }, 10);
+  });
 }
 
 /**
  * This Helper function helps to get end position of inserted line
- * 
+ *
  * @param {String} text the insertion text
  * @param {number} startLine the index of start line of insertion
  * @returns {vscode.Position}
@@ -107,22 +153,54 @@ function selectText(selection) {
 }
 
 /**
- * It checks if the active cursor line text is comment or not.
+ * It gives comment if the cursor is in a comment line
+ * Else it will return an empty string
  *
- * @returns {Boolean}
+ * @returns {String}
  */
-function isInCommentLine() {
+function getComment() {
   let editor = vscode.window.activeTextEditor;
-  if (!editor) return false;
+  if (!editor) return "";
 
   let lineIndex = editor.selection.active.line;
   let lineText = editor.document.lineAt(lineIndex).text;
-  return COMMENT_REGEX.test(lineText);
+
+  let comments, i = 0;
+  do {
+    comments = lineText.match(COMMENT_REGEX[i]);
+  } while (i < COMMENT_REGEX.length && !comments);
+
+  if (!comments) return "";
+  let comment = comments[0].replace(/\/\/|\/\*|\*\/|#|<!--|-->/g, "");
+  return comment.trim();
 }
 
-function deactivate() {}
+async function openInputBoxForApiKey() {
+  let input = await vscode.window.showInputBox({
+    placeHolder: 'Enter your API Key of OpenAI'
+  });
+  return input;
+}
 
-const COMMENT_REGEX = /(\/\*([\s\S]*?)\*\/|([^:]|^)\/\/(.*)$)/gm;
+async function storeApiKey(apiKey) {
+  let config = vscode.workspace.getConfiguration();
+  config.update('openAi.apiKey', apiKey, true);
+}
+
+function getApiKey() {
+  let config = vscode.workspace.getConfiguration();
+  let apiKey = config.get('openAi.apiKey');
+  return apiKey;
+}
+
+
+function deactivate() { }
+
+const COMMENT_REGEX = [
+  /(\/\*([\s\S]*?)\*\/|([^:]|^)\/\/(.*)$)/gm, // /* */ , //
+  /#[^\n]*/g, // #
+  /<!--([\s\S]*?)-->/g // <!-- -->
+];
 
 module.exports = {
   activate,
