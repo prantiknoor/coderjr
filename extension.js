@@ -14,7 +14,16 @@ function activate(context) {
       if (!apiKey) {
         let input = await openInputBoxForApiKey();
         if (!input) {
-          return vscode.window.showWarningMessage("Please enter you API Key");
+          const action = "How to get API KEY";
+          const action2 = "Get API Key";
+          let clickedAction = await vscode.window.showWarningMessage(
+            "Please enter you API Key", action, action2);
+          if (clickedAction === action) {
+            openLink(VIDEO_GUIDE_URL);
+          } else if (clickedAction === action2) {
+            openLink(GETTING_API_KEY_URL);
+          }
+          return;
         }
         apiKey = input;
         storeApiKey(apiKey);
@@ -34,7 +43,7 @@ function activate(context) {
 
       let statusBarMsg = vscode.window.setStatusBarMessage("Searching...");
 
-      let response = await requestToOpenApi(comment, apiKey);
+      let response = await requestToOpenAi(comment, apiKey);
 
       statusBarMsg.dispose();
 
@@ -60,7 +69,7 @@ function activate(context) {
  *
  * @returns {Promise<Object>}
  */
-async function requestToOpenApi(query, apiKey) {
+async function requestToOpenAi(query, apiKey) {
   let languageId = vscode.window.activeTextEditor.document.languageId;
 
   const options = {
@@ -73,8 +82,8 @@ async function requestToOpenApi(query, apiKey) {
     data: {
       model: "text-davinci-003",
       prompt: `${query} (${languageId})`,
-      temperature: 0.7,
-      max_tokens: 256,
+      temperature: 0.3,
+      max_tokens: 290,
       top_p: 1,
       frequency_penalty: 0,
       presence_penalty: 0,
@@ -193,8 +202,22 @@ function getApiKey() {
   return apiKey;
 }
 
+function openLink(link) {
+  var url = vscode.Uri.parse(link);
+  vscode.env.openExternal(url).then((success) => {
+    if (success) {
+      console.log(`Successfully opened ${url} in the browser`);
+    } else {
+      console.error(`Failed to open ${url} in the browser`);
+    }
+  });
+}
 
 function deactivate() { }
+
+
+const VIDEO_GUIDE_URL = "http://www.youtube.com/watch?v=HHoCB_qZlks";
+const GETTING_API_KEY_URL = "https://beta.openai.com/account/api-keys";
 
 const COMMENT_REGEX = [
   /(\/\*([\s\S]*?)\*\/|([^:]|^)\/\/(.*)$)/gm, // /* */ , //
