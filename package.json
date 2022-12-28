@@ -3,12 +3,12 @@
   "icon": "coderjr-logo.png",
   "displayName": "Coder Jr",
   "description": "Designed to streamline your coding workflow, this Visual Studio Code extension offers a range of helpful features and tools.",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "author": "Prantik",
   "repository": "https://github.com/prantiknoor/coderjr",
   "publisher": "Prantik",
   "engines": {
-    "vscode": "^1.74.0"
+    "vscode": "^1.50.0"
   },
   "categories": [
     "Other"
@@ -44,7 +44,7 @@
     "@types/glob": "^8.0.0",
     "@types/mocha": "^10.0.1",
     "@types/node": "16.x",
-    "@types/vscode": "^1.74.0",
+    "@types/vscode": "^1.50.0",
     "@vscode/test-electron": "^2.2.0",
     "eslint": "^8.28.0",
     "glob": "^8.0.3",
